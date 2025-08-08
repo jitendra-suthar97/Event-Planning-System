@@ -1,5 +1,11 @@
 {
   "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "./src/components/ui/"
+      ]
+    },
     "forceConsistentCasingInFileNames": true,
     "strict": true
   },
@@ -11,5 +17,5 @@
     {
       "path": "./tsconfig.node.json"
     }
-  ]
+  ],
 }

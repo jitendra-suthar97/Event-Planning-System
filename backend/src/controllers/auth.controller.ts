@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 import User from "../models/user.model.ts";
 import { sendMail } from "../utils/emails/sendVerificationEmail.ts";
 import { generateAccessAndRefreshToken } from "../utils/generateToken.ts";
@@ -112,7 +113,7 @@ export const Login = async (req: Request, res: Response) => {
     }
 
     const { accessToken, refreshToken } = generateAccessAndRefreshToken(
-      user._id,
+      user._id as import("mongoose").Types.ObjectId,
       res
     );
 
@@ -124,6 +125,7 @@ export const Login = async (req: Request, res: Response) => {
       success: true,
       message: "Login successful",
       accessToken,
+      userId: user._id,
     });
   } catch (error) {
     console.log("Error in login controller: ", error);
@@ -178,12 +180,51 @@ export const verifyEmail = async (req: Request, res: Response) => {
         .json({ success: false, message: "Incorrect verification code" });
     }
   } catch (error) {
-    console.error("Error in verifyUser controller: ", error.message);
+    console.error("Error in verifyUser controller: ", error);
     return res.status(500).json({
       success: false,
       message: "Internal server error",
     });
   }
+};
+
+export const Logout = async (req: Request, res: Response) => {
+  try {
+    await User.findByIdAndUpdate(
+      req.user?._id,
+      {
+        $unset: {
+          refreshToken: 1,
+        },
+      },
+      { new: true }
+    );
+
+    res
+      .status(200)
+      .clearCookie("refreshToken", {
+        httpOnly: true,
+        secure: true,
+        sameSite: "strict",
+      })
+      .json({ success: true, message: "Logged out" });
+  } catch (error) {
+    console.error("Error in logout controller: ", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+export const RefreshAccessToken = (req: Request, res: Response) => {
+  const accessToken = jwt.sign(
+    { id: req.user?._id },
+    process.env.ACCESS_TOKEN_SECRET as string,
+    { expiresIn: "15m" }
+  );
+
+  res.status(200).json({ success: true, accessToken });
 };
 
 export const resendVerifyCode = async (req: Request, res: Response) => {
@@ -223,7 +264,19 @@ export const resendVerifyCode = async (req: Request, res: Response) => {
       message: "Verification code resent successfully",
     });
   } catch (error) {
-    console.error("Error in resendVerifyCode controller: ", error.message);
+    console.error("Error in resendVerifyCode controller: ", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+export const getLoggedInUser = async (req: Request, res: Response) => {
+  try {
+    return res.status(200).json({ success: true, user: req.user });
+  } catch (error) {
+    console.error("Error in getLoggedInUser controller: ", error);
     return res.status(500).json({
       success: false,
       message: "Internal server error",

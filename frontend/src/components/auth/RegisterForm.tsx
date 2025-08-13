@@ -5,6 +5,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { ErrorMessage, Field, Form, Formik } from "formik";
 import type { ISignup } from "../../types/User";
 import { Eye, EyeOff, LockKeyhole, Mail, UserRound } from "lucide-react";
+import toast from "react-hot-toast";
 
 const validationSchema = Yup.object({
   userName: Yup.string()
@@ -56,7 +57,20 @@ const RegisterForm = () => {
       <Formik
         initialValues={initialValues}
         validationSchema={validationSchema}
-        onSubmit={handleSubmit}
+        onSubmit={async (values: ISignup, { resetForm, setSubmitting }) => {
+          await signup(values).then((res: any) => {
+            const { message, success, userId } = res;
+            if (success) {
+              resetForm();
+              localStorage.setItem("userId", userId);
+              navigate(`/verify?user=${userId}`);
+              setSubmitting(false);
+              toast.success(message);
+            } else {
+              toast.error(message);
+            }
+          });
+        }}
       >
         {({ isSubmitting }) => (
           <Form className="space-y-6 w-full">

@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { authStore } from "../../stores/authStore";
 import * as Yup from "yup";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { ErrorMessage, Field, Form, Formik } from "formik";
 import type { ILogin } from "src/types/User";
 import { Eye, EyeOff, LockKeyhole, Mail } from "lucide-react";
+import toast from "react-hot-toast";
 
 const validationSchema = Yup.object({
   identifier: Yup.string().required("Username or email is required"),
@@ -18,19 +19,31 @@ const initialValues: ILogin = {
 
 const LoginForm = () => {
   const [showpassword, setShowPassword] = useState<boolean>(false);
+  const navigate = useNavigate();
 
   const { login } = authStore();
-
-  const handleSubmit = async (values: ILogin) => {
-    await login(values);
-  };
 
   return (
     <div>
       <Formik
         initialValues={initialValues}
         validationSchema={validationSchema}
-        onSubmit={handleSubmit}
+        onSubmit={async (values: ILogin, { setSubmitting, resetForm }) => {
+          await login(values).then((res: any) => {
+            const { success, message, accessToken, userId } = res;
+            if (success) {
+              localStorage.setItem("accessToken", accessToken);
+              localStorage.setItem("userId", userId);
+              setSubmitting(false);
+              resetForm();
+              toast.success(message);
+              navigate("/");
+            } else {
+              toast.error(message);
+              console.error(message);
+            }
+          });
+        }}
       >
         {({ isSubmitting }) => (
           <Form className="space-y-6 w-full">

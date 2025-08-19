@@ -36,8 +36,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "../../../ui/dropdown-menu";
-import { venueStore } from "../../../../stores/venueStore";
-import type { Venue } from "../../../../types/Venue";
 
 const mockVenues = [
   {
@@ -274,7 +272,6 @@ const mockVenues = [
 
 const Venues = () => {
   const { isAdmin } = authStore();
-  const { deleteVenue } = venueStore();
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [priceRange, setPriceRange] = useState<string>("all");
@@ -296,7 +293,7 @@ const Venues = () => {
     return matchesSearch && matchesCategory && matchesPrice;
   });
 
-  const handleBooking = (venue: Venue) => {
+  const handleBooking = (venue: any) => {
     const createEventUrl = `/events/create?venue=${encodeURIComponent(
       venue.name
     )}&location=${encodeURIComponent(venue.location)}`;

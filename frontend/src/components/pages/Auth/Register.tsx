@@ -1,5 +1,5 @@
 import AuthLayout from "../../layouts/AuthLayout";
-import RegisterForm from "../../auth/RegisterForm";
+import RegisterForm from "./RegisterForm";
 
 const SignUp = () => {
   return (

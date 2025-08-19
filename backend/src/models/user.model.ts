@@ -8,7 +8,8 @@ export interface UserDocument extends Document {
   isVerified: boolean;
   verifyCode: number | undefined;
   verifyCodeExpiry: Date | undefined;
-  refreshToken: string;
+  refreshToken: string | undefined;
+  isAdmin: boolean;
 }
 
 const userSchema = new Schema<UserDocument>(
@@ -42,12 +43,10 @@ const userSchema = new Schema<UserDocument>(
     refreshToken: {
       type: String,
     },
-    // events: [
-    //   {
-    //     type: Schema.Types.ObjectId,
-    //     ref: "Events",
-    //   },
-    // ],
+    isAdmin: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );

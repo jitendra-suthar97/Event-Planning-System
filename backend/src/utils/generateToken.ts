@@ -7,7 +7,7 @@ export const generateAccessAndRefreshToken = (
   res: Response
 ) => {
   const accessToken = jwt.sign({ id }, process.env.ACCESS_TOKEN_SECRET!, {
-    expiresIn: "15m",
+    expiresIn: "1h",
   });
 
   const refreshToken = jwt.sign({ id }, process.env.REFRESH_TOKEN_SECRET!, {

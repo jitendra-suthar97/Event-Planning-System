@@ -2,8 +2,8 @@ import type { Request, Response } from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import User from "../models/user.model.ts";
-import { sendMail } from "../utils/emails/sendVerificationEmail.ts";
 import { generateAccessAndRefreshToken } from "../utils/generateToken.ts";
+import { sendVerificationCode } from "../utils/emailReminder/mail.ts";
 
 export const Register = async (req: Request, res: Response) => {
   try {
@@ -39,7 +39,9 @@ export const Register = async (req: Request, res: Response) => {
 
         existingUserWithEmail.password = hashPassword;
         existingUserWithEmail.verifyCode = verifyCode;
-        existingUserWithEmail.verifyCodeExpiry = new Date(Date.now() + 3600000);
+        existingUserWithEmail.verifyCodeExpiry = new Date(
+          Date.now() + 2 * 60 * 1000
+        );
 
         userId = existingUserWithEmail._id;
         await existingUserWithEmail.save();
@@ -54,20 +56,24 @@ export const Register = async (req: Request, res: Response) => {
         password: hashPassword,
         verifyCode,
         isVerified: false,
-        verifyCodeExpiry: new Date(Date.now() + 3600000),
+        verifyCodeExpiry: new Date(Date.now() + 2 * 60 * 1000),
       });
 
       userId = newUser._id;
       await newUser.save();
     }
 
-    // const emailResponse = await sendMail(email, userName, verifyCode);
+    const emailResponse = await sendVerificationCode(
+      email,
+      userName,
+      verifyCode
+    );
 
-    // if (!emailResponse.success) {
-    //   return res
-    //     .status(500)
-    //     .json({ success: false, message: emailResponse.response });
-    // }
+    if (!emailResponse.success) {
+      return res
+        .status(500)
+        .json({ success: false, message: emailResponse.response });
+    }
 
     res.status(201).json({
       success: true,
@@ -190,11 +196,12 @@ export const verifyEmail = async (req: Request, res: Response) => {
 
 export const Logout = async (req: Request, res: Response) => {
   try {
+    const refreshToken = req.cookies.refreshToken;
     await User.findByIdAndUpdate(
-      req.user?._id,
+      refreshToken,
       {
-        $unset: {
-          refreshToken: 1,
+        $set: {
+          refreshToken: undefined,
         },
       },
       { new: true }
@@ -221,7 +228,7 @@ export const RefreshAccessToken = (req: Request, res: Response) => {
   const accessToken = jwt.sign(
     { id: req.user?._id },
     process.env.ACCESS_TOKEN_SECRET as string,
-    { expiresIn: "15m" }
+    { expiresIn: "1h" }
   );
 
   res.status(200).json({ success: true, accessToken });
@@ -248,7 +255,7 @@ export const resendVerifyCode = async (req: Request, res: Response) => {
     const verifyCode = Math.floor(100000 + Math.random() * 900000);
 
     user.verifyCode = verifyCode;
-    user.verifyCodeExpiry = new Date(Date.now() + 3600000);
+    user.verifyCodeExpiry = new Date(Date.now() + 2 * 60 * 1000);
     user.save({ validateBeforeSave: false });
 
     // const emailResponse = await sendMail(user.email, user.userName, verifyCode);
@@ -258,6 +265,18 @@ export const resendVerifyCode = async (req: Request, res: Response) => {
     //     .status(500)
     //     .json({ success: false, message: emailResponse.response });
     // }
+
+    const emailResponse = await sendVerificationCode(
+      user.email,
+      user.userName,
+      verifyCode
+    );
+
+    if (!emailResponse.success) {
+      return res
+        .status(500)
+        .json({ success: false, message: emailResponse.response });
+    }
 
     res.status(200).json({
       success: true,
@@ -274,6 +293,7 @@ export const resendVerifyCode = async (req: Request, res: Response) => {
 
 export const getLoggedInUser = async (req: Request, res: Response) => {
   try {
+    console.log("user: ", req.user);
     return res.status(200).json({ success: true, user: req.user });
   } catch (error) {
     console.error("Error in getLoggedInUser controller: ", error);

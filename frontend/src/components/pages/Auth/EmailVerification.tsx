@@ -1,4 +1,4 @@
-import VerificationForm from "../../auth/VerificationForm";
+import VerificationForm from "./EmailVerificationForm";
 import AuthLayout from "../../layouts/AuthLayout";
 
 const EmailVerification = () => {

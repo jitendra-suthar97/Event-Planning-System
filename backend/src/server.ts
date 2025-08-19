@@ -5,7 +5,11 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 
 import authRouter from "./routes/auth.route.ts";
+import eventRouter from "./routes/event.route.ts";
+import guestRouter from "./routes/guest.route.ts";
+
 import { ConnectMongo } from "./utils/DB.ts";
+import { scheduleEventReminder } from "./utils/emailReminder/scheduleEventReminder.ts";
 
 dotenv.config();
 
@@ -21,7 +25,11 @@ app.use(
   })
 );
 
+scheduleEventReminder();
+
 app.use("/api/auth", authRouter);
+app.use("/api/event", eventRouter);
+app.use("/api/guest", guestRouter);
 
 app.listen(port, async () => {
   await ConnectMongo();

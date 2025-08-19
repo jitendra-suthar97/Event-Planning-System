@@ -10,11 +10,13 @@ export interface ISignup {
 }
 
 export interface IUser extends ISignup {
-  id: string;
+  _id: string;
   profileImage: string;
+  isAdmin?: boolean;
 }
 
 export interface AuthStore {
+  isAdmin: boolean;
   token: string | null;
   isLoading: boolean;
   loggedInUser: IUser | null;
@@ -23,5 +25,5 @@ export interface AuthStore {
   verifyEmail: (code: number, id: string) => Promise<string>;
   resendCode: (id: string) => Promise<string>;
   logout: () => Promise<void>;
-  getLoggedInUser: () => Promise<void>;
+  getLoggedInUser: (userId: string) => Promise<void>;
 }

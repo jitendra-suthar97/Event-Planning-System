@@ -8,6 +8,7 @@ import {
 import {
   getLoggedInUser,
   Login,
+  Logout,
   RefreshAccessToken,
   Register,
   resendVerifyCode,
@@ -21,7 +22,8 @@ router.post("/register", validate(registrationSchema), Register);
 router.post("/login", validate(loginSchema), Login);
 router.post("/verifyEmail/:id", validate(emailVerificationSchema), verifyEmail);
 router.post("/resendCode/:id", resendVerifyCode);
-router.get("/getLoggedInUser", isAuthenticated, getLoggedInUser);
+router.post("/logout", Logout);
 router.post("/refreshToken", CheckRefreshToken, RefreshAccessToken);
+router.get("/getLoggedInUser", isAuthenticated, getLoggedInUser);
 
 export default router;

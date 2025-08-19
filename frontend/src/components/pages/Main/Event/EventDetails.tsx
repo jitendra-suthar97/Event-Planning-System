@@ -1,220 +1,300 @@
+import { useEffect, useState } from "react";
+import { Link, useParams } from "react-router-dom";
+import { eventStore } from "../../../../stores/eventStore";
+import { rsvpStore } from "../../../../stores/guestStore";
+import { authStore } from "../../../../stores/authStore";
+
+import { Badge } from "../../../ui/badge";
+import { Button } from "../../../ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../../../ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../../../ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "../../../ui/dialog";
+
+import { Formik, Form, Field } from "formik";
 import {
   Calendar,
-  CheckCircle,
   Clock,
-  Clock3,
-  Loader,
   MapPin,
   Users,
-  XCircle,
+  Clock3,
+  Plus,
+  Loader,
+  Edit,
+  Trash2,
+  EllipsisVertical,
 } from "lucide-react";
-import React, { useEffect } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
-import { Button } from "../../../ui/button";
-import { authStore } from "../../../../stores/authStore";
-import { eventStore } from "../../../../stores/eventStore";
-import { Badge } from "../../../ui/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "../../../ui/card";
 import { formatDate, formatTime } from "../../../../utils/formatDate";
-import { rsvpStore } from "../../../../stores/rsvpStore";
+import { AddGuestSchema } from "../../../../schemas/GuestSchema";
+import toast from "react-hot-toast";
+import type { Guest } from "src/types/Guest";
 
 const EventDetails = () => {
-  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
   const { id } = useParams<{ id: string }>();
   const { loggedInUser } = authStore();
-  const { loading, currentEvent, getEventById, deleteEvent } = eventStore();
-  const { rsvps, rsvpStats, getRSVPsByEventId, getRSVPStats } = rsvpStore();
+  const { currentEvent, loading: eventLoading } = eventStore();
+  const {
+    guests,
+    getGuestsByEventId,
+    addGuest,
+    deleteGuest,
+    loading: guestLoading,
+  } = rsvpStore();
 
   useEffect(() => {
-    if (id) {
-      getEventById(id);
-      getRSVPsByEventId(id);
-      getRSVPStats(id);
+    getGuestsByEventId(id!);
+  }, [getGuestsByEventId, addGuest]);
+
+  const handleDelete = async (guest: Guest) => {
+    if (
+      window.confirm(
+        `Are you sure you want to delete guest "${guest.guestName}"?`
+      )
+    ) {
+      await deleteGuest(guest._id).then((res: any) => {
+        const { success, message } = res;
+        if (success) {
+          toast.success(message);
+        }
+      });
     }
-  }, [id, getEventById, getRSVPStats, getRSVPsByEventId]);
+  };
 
-  if (loading) {
+  if (eventLoading || !currentEvent) {
     return (
-      <div className="container mx-auto py-8 px-4">
-        <div className="flex flex-col items-center py-12">
-          <Loader size={48} className="mb-4" />
-          <span>Loading event details...</span>
-        </div>
+      <div className="container mx-auto py-12 flex flex-col items-center">
+        {eventLoading ? <Loader size={48} className="mb-4" /> : null}
+        <span>{eventLoading ? "Loading event..." : "Event not found"}</span>
       </div>
     );
   }
 
-  if (!currentEvent) {
-    return (
-      <div className="container mx-auto py-8 px-4">
-        <div className="text-center py-12">
-          <h2 className="text-2xl font-semibold mb-2">Event not found</h2>
-          <p className="text-muted-foreground mb-6">
-            The event you're looking for doesn't exist or has been deleted.
-          </p>
-          <Button asChild>
-            <Link to="/events">Back to Events</Link>
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
+  const isOwner = loggedInUser?._id === currentEvent.createdBy;
   const eventDate = new Date(currentEvent.date);
-  const isUpcomming = eventDate >= new Date();
-  const isOwner = loggedInUser?.id === currentEvent.createdBy;
+  const isUpcoming = eventDate >= new Date();
 
   return (
-    <div className="container mx-auto py-8 px-4">
-      <div className="max-w-4xl mx-auto space-y-8">
-        <div className="flex justify-between items-start">
-          <div className="flex-1">
-            <div className="flex items-center space-x-3 mb-2">
-              <h1 className="text-3xl font-bold">{currentEvent.title}</h1>
-              {currentEvent.isPublic && (
-                <Badge variant={"secondary"}>Public</Badge>
-              )}
-              {isUpcomming ? (
-                <Badge variant={"default"}>Upcoming</Badge>
-              ) : (
-                <Badge variant={"outline"}>Past Event</Badge>
-              )}
-            </div>
-            <p className="text-muted-foreground">{currentEvent.description}</p>
-          </div>
+    <div className="container mx-auto py-8 px-4 space-y-8">
+      <div className="space-y-2">
+        <h1 className="text-3xl font-bold">{currentEvent.title}</h1>
+        <p className="text-muted-foreground">{currentEvent.description}</p>
+        <div className="flex flex-wrap gap-2 mt-2">
+          {currentEvent.isPublic && <Badge variant="secondary">Public</Badge>}
+          {isUpcoming ? (
+            <Badge variant="default">Upcoming</Badge>
+          ) : (
+            <Badge variant="outline">Past</Badge>
+          )}
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Event Details</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex items-center">
-                    <Calendar className="h-5 w-5 mr-3 text-muted-foreground" />
-                    <div>
-                      <p className="font-medium">
-                        {formatDate(currentEvent.date.toString())}
-                      </p>
-                      <p className="text-sm text-muted-foreground">Date</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center">
-                    <Clock className="h-5 w-5 mr-3 text-muted-foreground" />
-                    <div>
-                      <p className="font-medium">
-                        {formatTime(currentEvent.time)}
-                      </p>
-                      <p className="text-sm text-muted-foreground">Time</p>
-                    </div>
-                  </div>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="flex items-center space-x-2">
+          <Calendar className="w-5 h-5 text-muted-foreground" />
+          <span>{formatDate(currentEvent.date.toString())}</span>
+        </div>
+        <div className="flex items-center space-x-2">
+          <Clock className="w-5 h-5 text-muted-foreground" />
+          <span>{formatTime(currentEvent.time)}</span>
+        </div>
+        <div className="flex items-center space-x-2">
+          <MapPin className="w-5 h-5 text-muted-foreground" />
+          <span>{currentEvent.location}</span>
+        </div>
+        <div className="flex items-center space-x-2">
+          <Users className="w-5 h-5 text-muted-foreground" />
+          <span>{currentEvent.capacity} Guests</span>
+        </div>
+        {currentEvent.rsvpDeadline && (
+          <div className="flex items-center space-x-2 col-span-1 md:col-span-2 lg:col-span-4">
+            <Clock3 className="w-5 h-5 text-muted-foreground" />
+            <span>
+              RSVP by {formatDate(currentEvent.rsvpDeadline.toString())}
+            </span>
+          </div>
+        )}
+      </div>
 
-                  <div className="flex items-center">
-                    <MapPin className="h-5 w-5 mr-3 text-muted-foreground" />
-                    <div>
-                      <p className="font-medium">{currentEvent.location}</p>
-                      <p className="text-sm text-muted-foreground">Location</p>
-                    </div>
-                  </div>
+      {isOwner && (
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h2 className="text-2xl font-semibold">Guest List</h2>
 
-                  <div className="flex items-center">
-                    <Users className="h-5 w-5 mr-3 text-muted-foreground" />
-                    <div>
-                      <p className="font-medium">
-                        Up to {currentEvent.capacity}
-                      </p>
-                      <p className="text-sm text-muted-foreground">Capacity</p>
-                    </div>
-                  </div>
-                </div>
-                {currentEvent.rsvpDeadline && (
-                  <div className="pt-4 border-t">
-                    <div className="flex items-center">
-                      <Clock3 className="h-5 w-5 mr-3 text-muted-foreground" />
-                      <div>
-                        <p className="font-medium">
-                          RSVP by{" "}
-                          {formatDate(currentEvent.rsvpDeadline.toString())}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          RSVP Deadline
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-            {isOwner && rsvps.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Guest List</CardTitle>
-                  <CardDescription>
-                    {rsvps.length}{" "}
-                    {rsvps.length === 1 ? "person has" : "people have"}{" "}
-                    responded
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {rsvps.map((rsvp) => (
-                      <div
-                        key={rsvp.id}
-                        className="flex items-center justify-between p-3 border rounded-lg"
-                      >
-                        <div className="flex-1">
-                          <p className="font-medium">{rsvp.guestName}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {rsvp.guestEmail}
-                          </p>
-                          {rsvp.notes && (
-                            <p className="text-sm text-muted-foreground mt-1">
-                              "{rsvp.notes}"
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="size-4" />
+                  Add Guest
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>New Guest</DialogTitle>
+                </DialogHeader>
+
+                <Formik
+                  initialValues={{
+                    eventId: id!,
+                    guestName: "",
+                    guestEmail: "",
+                  }}
+                  validationSchema={AddGuestSchema}
+                  onSubmit={async (values, { resetForm }) => {
+                    if (!id) return;
+                    await addGuest(values).then((res: any) => {
+                      const { success, message } = res;
+                      if (success) {
+                        toast.success(message);
+                      }
+                    });
+                    resetForm();
+                    setOpen(false);
+                  }}
+                >
+                  {({ setFieldValue, errors, touched }) => {
+                    useEffect(() => {
+                      setFieldValue("eventId", id);
+                    }, [setFieldValue]);
+                    return (
+                      <Form className="space-y-4">
+                        <div className="space-y-2">
+                          <label className="block text-sm font-medium">
+                            Name
+                          </label>
+                          <Field
+                            name="guestName"
+                            placeholder="Enter guest name"
+                            className="w-full p-2 border rounded"
+                          />
+                          {errors.guestName && touched.guestName && (
+                            <p className="text-red-500 text-sm">
+                              {errors.guestName}
                             </p>
                           )}
                         </div>
-                        <div className="flex items-center">
-                          {rsvp.status === "accepted" && (
-                            <Badge
-                              variant="default"
-                              className="bg-green-100 text-green-800"
-                            >
-                              <CheckCircle className="h-3 w-3 mr-1" />
-                              Attending
-                            </Badge>
-                          )}
-                          {rsvp.status === "declined" && (
-                            <Badge
-                              variant="secondary"
-                              className="bg-red-100 text-red-800"
-                            >
-                              <XCircle className="h-3 w-3 mr-1" />
-                              Not Attending
-                            </Badge>
-                          )}
-                          {rsvp.status === "pending" && (
-                            <Badge variant="outline">
-                              <Clock3 className="h-3 w-3 mr-1" />
-                              Pending
-                            </Badge>
+
+                        <div className="space-y-2">
+                          <label className="block text-sm font-medium">
+                            Email
+                          </label>
+                          <Field
+                            type="email"
+                            name="guestEmail"
+                            placeholder="Enter guest email"
+                            className="w-full p-2 border rounded"
+                          />
+                          {errors.guestEmail && touched.guestEmail && (
+                            <p className="text-red-500 text-sm">
+                              {errors.guestEmail}
+                            </p>
                           )}
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+
+                        <Button type="submit" disabled={guestLoading}>
+                          {guestLoading ? "Adding..." : "Add Guest"}
+                        </Button>
+                      </Form>
+                    );
+                  }}
+                </Formik>
+              </DialogContent>
+            </Dialog>
           </div>
+
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>RSVP Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {guests.map((guest) => (
+                <TableRow key={guest._id}>
+                  <TableCell>{guest.guestName}</TableCell>
+                  <TableCell>{guest.guestEmail}</TableCell>
+                  <TableCell>
+                    {guest.rsvpStatus === "accepted" && (
+                      <Badge
+                        variant="default"
+                        className="bg-green-100 text-green-800"
+                      >
+                        Attending
+                      </Badge>
+                    )}
+                    {guest.rsvpStatus === "declined" && (
+                      <Badge
+                        variant="secondary"
+                        className="bg-red-100 text-red-800"
+                      >
+                        Not Attending
+                      </Badge>
+                    )}
+                    {guest.rsvpStatus === "pending" && (
+                      <Badge variant="outline">Pending</Badge>
+                    )}
+                  </TableCell>
+                  <TableCell className="items-end">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="icon">
+                          <EllipsisVertical className="size-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent
+                        align="end"
+                        className="rounded-xl shadow-md"
+                      >
+                        {/* <DropdownMenuItem
+                          asChild
+                          className="cursor-pointer group"
+                        >
+                          <Link
+                            onClick={() => }
+                            to={`/events/${guest._id}/edit`}
+                            className="flex items-center w-full px-2 py-1.5 rounded-md transition-colors group-hover:bg-gray-100 group-hover:text-blue-600"
+                          >
+                            <Edit className="mr-2 size-4 transition-colors group-hover:text-blue-600" />
+                            <span className="group-hover:text-blue-600">
+                              Edit
+                            </span>
+                          </Link>
+                        </DropdownMenuItem> */}
+                        <DropdownMenuItem
+                          onClick={() => handleDelete(guest)}
+                          className="cursor-pointer focus:text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors rounded-md"
+                        >
+                          <Trash2 className="size-4 mr-2 group-hover:text-red-700 transition-colors" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </div>
-      </div>
+      )}
     </div>
   );
 };

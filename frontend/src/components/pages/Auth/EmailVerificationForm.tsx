@@ -1,11 +1,14 @@
 import { ErrorMessage, Field, Form, Formik } from "formik";
 import { Hash } from "lucide-react";
-import { authStore } from "../../stores/authStore";
+import { authStore } from "../../../stores/authStore";
 import * as Yup from "yup";
 import { useLocation, useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 
 const validationSchema = Yup.object({
-  code: Yup.number().required("Verification code is required"),
+  code: Yup.string()
+    .matches(/^\d{6}$/, "Enter a valid 6-digit code")
+    .required("Verification code is required"),
 });
 
 const VerificationForm = () => {
@@ -15,8 +18,15 @@ const VerificationForm = () => {
   const userId = params.get("user");
   const navigate = useNavigate();
 
-  const handleSubmit = async (values: { code: number }) => {
-    await verifyEmail(values.code, userId!);
+  const handleSubmit = async (values: { code: string }) => {
+    const numericCode = Number(values.code);
+    await verifyEmail(numericCode, userId!).then((res: any) => {
+      const { success, message } = res;
+      if (success) {
+        toast.success(message);
+        navigate("/login");
+      }
+    });
   };
 
   const handleResend = async () => {
@@ -25,7 +35,7 @@ const VerificationForm = () => {
   return (
     <div>
       <Formik
-        initialValues={{ code: 0 }}
+        initialValues={{ code: "" }}
         validationSchema={validationSchema}
         onSubmit={handleSubmit}
       >
@@ -47,6 +57,7 @@ const VerificationForm = () => {
                   name="code"
                   className="w-full h-9 pl-8 pr-2 rounded-md border border-gray-100 bg-gray-50 text-gray-900 focus:outline-none"
                   type="number"
+                  min={0}
                   maxLength={6}
                   placeholder="Enter verification code"
                 />

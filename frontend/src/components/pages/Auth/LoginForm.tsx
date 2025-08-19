@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { authStore } from "../../stores/authStore";
+import { authStore } from "../../../stores/authStore";
 import * as Yup from "yup";
 import { Link, useNavigate } from "react-router-dom";
 import { ErrorMessage, Field, Form, Formik } from "formik";
@@ -21,7 +21,7 @@ const LoginForm = () => {
   const [showpassword, setShowPassword] = useState<boolean>(false);
   const navigate = useNavigate();
 
-  const { login } = authStore();
+  const { login, getLoggedInUser } = authStore();
 
   return (
     <div>
@@ -34,6 +34,8 @@ const LoginForm = () => {
             if (success) {
               localStorage.setItem("accessToken", accessToken);
               localStorage.setItem("userId", userId);
+              authStore.setState({ token: accessToken });
+              getLoggedInUser(userId);
               setSubmitting(false);
               resetForm();
               toast.success(message);

@@ -1,4 +1,4 @@
-export enum EventCategories {
+export enum Categories {
   Conference = "Conference",
   Workshop = "Workshop",
   Concert = "Concert",
@@ -6,33 +6,38 @@ export enum EventCategories {
   Festival = "Festival",
   Birthday = "Birthday",
   Wedding = "Wedding",
+  Meeting = "Meeting",
 }
 
 export interface EventFormData {
+  createdBy: string;
   title: string;
   description: string;
-  date: Date;
+  date: string;
   time: string;
   location: string;
-  createdBy: string;
   estimatedBudget: number;
-  capacity: number;
+  capacity?: number;
   isPublic: boolean;
-  rsvpDeadline: Date;
-  catagory: EventCategories;
+  rsvpDeadline?: string;
+  category: Categories;
 }
 
 export interface Event extends EventFormData {
-  id: string;
+  _id: string;
+  budgetSpend?: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface EventStore {
   events: Event[];
   currentEvent: Event | null;
   loading: boolean;
+  setCurrentEvent: (data: Event) => void;
   createEvent: (data: EventFormData) => Promise<any>;
-  getEventById: (id: string) => Promise<void>;
-  getEventsByUserId: (id: string) => Promise<void>;
+  getEventsByUserId: () => Promise<void>;
   deleteEvent: (id: string) => Promise<void>;
   clearCurrentEvent: () => void;
+  editEvent: (id: string, data: EventFormData) => Promise<any>;
 }
